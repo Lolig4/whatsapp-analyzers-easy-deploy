@@ -1,0 +1,15 @@
+dash
+dash-bootstrap-components
+dash-core-components
+dash-cytoscape
+dash-daq
+dash-html-components
+dash-renderer
+dash-table
+gunicorn
+pandas
+plotly
+psycopg2
+python-dotenv
+SQLAlchemy
+wordcloud
