@@ -1,0 +1,15 @@
+# Lokale Abhaengigkeiten (Original: requirements.txt, unveraendert)
+#
+# Aenderungen gegenueber dem Original:
+#   - numpy ERGAENZT : wird in main.py importiert, fehlte in requirements.txt
+#                      (kam bisher nur zufaellig als pandas-Abhaengigkeit mit).
+# Sonst identisch - der Code nutzt bereits die aktuelle emoji-API (emoji.EMOJI_DATA).
+
+streamlit
+pandas
+numpy
+matplotlib
+seaborn
+wordcloud
+urlextract
+emoji
