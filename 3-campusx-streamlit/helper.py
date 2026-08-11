@@ -76,7 +76,10 @@ def most_common_words(selected_user,df):
             if word not in stop_words:
                 words.append(word)
 
-    most_common_df = pd.DataFrame(Counter(words).most_common(20))
+    # columns=[0, 1] so the frame keeps its shape even when there are no words:
+    # pd.DataFrame([]) has NO columns, and app.py's most_common_df[0] would
+    # then raise KeyError.
+    most_common_df = pd.DataFrame(Counter(words).most_common(20), columns=[0, 1])
     return most_common_df
 
 def emoji_helper(selected_user,df):
@@ -88,7 +91,10 @@ def emoji_helper(selected_user,df):
         # emoji.UNICODE_EMOJI was removed in emoji 2.0 -> EMOJI_DATA
         emojis.extend([c for c in message if c in emoji.EMOJI_DATA])
 
-    emoji_df = pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))))
+    # columns=[0, 1] so a chat without any emoji still yields a frame with the
+    # expected columns instead of an empty one (KeyError: 1 in app.py).
+    emoji_df = pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))),
+                            columns=[0, 1])
 
     return emoji_df
 

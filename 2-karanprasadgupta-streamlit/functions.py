@@ -97,7 +97,11 @@ def getEmoji(df):
     emojis = []
     for message in df['Message']:
         emojis.extend([c for c in message if c in emoji.EMOJI_DATA])
-    return pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))))
+    # columns=[0, 1] so a chat without any emoji still yields a frame with the
+    # expected columns; pd.DataFrame([]) has none and main.py's emojiDF[1]
+    # would raise KeyError.
+    return pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))),
+                        columns=[0, 1])
 
 
 def getMonthlyTimeline(df):
@@ -121,7 +125,9 @@ def MostCommonWords(df):
         for word in message.lower().split():
             if word not in stop_words:
                 words.append(word)
-    return pd.DataFrame(Counter(words).most_common(20))
+    # columns=[0, 1] for the same reason: keep the shape when nothing is left
+    # after stop-word filtering.
+    return pd.DataFrame(Counter(words).most_common(20), columns=[0, 1])
 
 def dailytimeline(df):
     df['taarek'] = df['Date']

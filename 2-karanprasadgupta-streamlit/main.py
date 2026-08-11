@@ -75,10 +75,15 @@ if file:
             with col1:
                 st.dataframe(emojiDF)
             with col2:
-                fig, ax = plt.subplots()
-                ax.pie(emojiDF[1].head(), labels=emojiDF[0].head(), autopct="%0.2f", shadow=True)
-                plt.legend()
-                st.pyplot(fig)
+                # A pie chart of nothing raises "All wedge sizes are zero", so
+                # skip it when the chat contains no emoji.
+                if emojiDF.empty:
+                    st.info("No emoji found in this chat.")
+                else:
+                    fig, ax = plt.subplots()
+                    ax.pie(emojiDF[1].head(), labels=emojiDF[0].head(), autopct="%0.2f", shadow=True)
+                    plt.legend()
+                    st.pyplot(fig)
 
             # Common Word
             commonWord = functions.MostCommonWords(df)
