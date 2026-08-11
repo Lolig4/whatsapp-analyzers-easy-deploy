@@ -175,7 +175,10 @@ def update_groupchat(dropdown_users, start_date_str, end_date_str, interval1, in
     else:
         by_category = filtered_df[['contact', 'category']].pivot_table(index='contact', columns='category', aggfunc=len, fill_value=0).reindex(columns=settings.CATEGORIES, fill_value=0)
         by_column = filtered_df.groupby('contact').sum(numeric_only=True)
-        by_domain = Counter(df[df.count_link > 0].list_link.sum())
+        # Series.sum() on an empty selection returns the int 0, not [],
+        # and Counter(0) raises TypeError. Happens whenever the chat
+        # contains no links at all.
+        by_domain = Counter(df[df.count_link > 0].list_link.sum() or [])
         output = [
             ctx.triggered[0]['prop_id'],
             '{:,} sent, {:,} deleted'.format(by_category.sum().sum() - by_category['Event'].sum(), by_category['Deleted'].sum()),
@@ -246,7 +249,10 @@ def update_personalchat(dropdown_users, start_date_str, end_date_str, interval1,
     else:
         by_category = filtered_df[['contact', 'category']].pivot_table(index='contact', columns='category', aggfunc=len, fill_value=0).reindex(columns=settings.CATEGORIES, fill_value=0)
         by_column = filtered_df.groupby('contact').sum(numeric_only=True)
-        by_domain = Counter(df[df.count_link > 0].list_link.sum())
+        # Series.sum() on an empty selection returns the int 0, not [],
+        # and Counter(0) raises TypeError. Happens whenever the chat
+        # contains no links at all.
+        by_domain = Counter(df[df.count_link > 0].list_link.sum() or [])
         output = [
             ctx.triggered[0]['prop_id'],
             '{:,} sent, {:,} deleted'.format(by_category.sum().sum() - by_category['Event'].sum(), by_category['Deleted'].sum()),

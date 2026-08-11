@@ -123,9 +123,17 @@ def chart6(df, n):
 def chart7(df):
     """Generate WordCloud."""
     list_words = df.list_words.sum()
+    # Same guard as chart6: .sum() over an empty selection returns the int 0
+    # instead of a list, which would break get_stopwords()/Counter().
+    if not isinstance(list_words, list):
+        list_words = []
     stopwords = get_stopwords(list_words)
     counter = dict(Counter(list_words))
     counter = {key: counter[key] for key in counter if key not in stopwords and key.isalpha()}
+    if not counter:
+        # WordCloud raises "We need at least 1 word to plot a word cloud".
+        # Return an empty src so the <img> just stays blank.
+        return ''
     wc = WordCloud(stopwords=stopwords, prefer_horizontal=0.9, colormap='tab10', background_color='white', min_font_size=10, width=1000, height=250, scale=2)
     wc_img = wc.generate_from_frequencies(frequencies=counter).to_image()
     with BytesIO() as buffer:
