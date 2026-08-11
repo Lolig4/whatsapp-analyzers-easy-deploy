@@ -365,7 +365,10 @@ personalchat = html.Div([
                             'line-color': '#1ebea5'}}],
                     elements=[])]), style={'margin-top': '20px'}),
 
-        html.Div(id='counter', style={'visibility': 'hidden'})], className='visualize'),
+        # id was copy-pasted from the groupchat layout; update_personalchat
+        # outputs to 'counter2', and a missing output component stops Dash
+        # from ever running the callback - every statistic stayed blank.
+        html.Div(id='counter2', style={'visibility': 'hidden'})], className='visualize'),
 
     html.Div(footer)
 ])
