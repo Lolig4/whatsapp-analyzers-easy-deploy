@@ -1,0 +1,19 @@
+# Projekt-lokale Streamlit-Konfiguration.
+# Ersetzt das mitgelieferte setup.sh, das nach ~/.streamlit/config.toml
+# geschrieben haette - also ausserhalb dieses Projektordners.
+
+[server]
+port = 8502
+address = "localhost"      # nur lokal erreichbar, kein 0.0.0.0
+headless = true            # kein automatisches Oeffnen des Browsers
+enableCORS = false
+enableXsrfProtection = true
+fileWatcherType = "none"   # kein Neustart bei Dateiaenderung
+
+[browser]
+gatherUsageStats = false   # keine Telemetrie nach aussen
+serverAddress = "localhost"
+serverPort = 8502
+
+[global]
+developmentMode = false
