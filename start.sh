@@ -6,6 +6,11 @@
 #   2-karanprasadgupta-streamlit  Streamlit   http://localhost:8502
 #   3-campusx-streamlit           Streamlit   http://localhost:8503
 #
+# Sobald eine App antwortet, wird sie im Standardbrowser geoeffnet.
+#
+#   ./start.sh                startet alles und oeffnet den Browser
+#   ./start.sh --no-browser   startet alles ohne Browser (z.B. auf einem Server)
+#
 # Logs   : logs/<projekt>.log
 # PIDs   : pids/<projekt>.pid
 # Stoppen: ./stop.sh
@@ -24,6 +29,9 @@ cd "$BASE"
 LOG_DIR="$BASE/logs"
 PID_DIR="$BASE/pids"
 mkdir -p "$LOG_DIR" "$PID_DIR"
+
+OPEN_BROWSER=1
+[[ "${1:-}" == "--no-browser" ]] && OPEN_BROWSER=0
 
 if [[ -t 1 ]]; then
     B=$'\033[1m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; N=$'\033[0m'
@@ -121,6 +129,7 @@ done
 # --- Warten bis die Ports antworten ------------------------------------------
 info "Warte auf HTTP-Antwort (max. 90s)"
 overall=0
+READY_URLS=()
 for entry in "${APPS[@]}"; do
     IFS='|' read -r name dir port <<< "$entry"
     up=0
@@ -130,6 +139,7 @@ for entry in "${APPS[@]}"; do
         if [[ "$code" =~ ^(200|302|303)$ ]]; then
             printf '  %s+%s %-28s HTTP %s  ->  http://localhost:%s\n' \
                    "$G" "$N" "$name" "$code" "$port"
+            READY_URLS+=("http://localhost:$port")
             up=1; break
         fi
         # Prozess vorzeitig gestorben?
@@ -145,6 +155,41 @@ for entry in "${APPS[@]}"; do
         overall=1
     fi
 done
+
+# --- Im Browser oeffnen -------------------------------------------------------
+# Nur die Apps, die tatsaechlich geantwortet haben - ein Tab auf einen toten
+# Port hilft niemandem.
+open_url() {
+    local url="$1"
+    if [[ -n "${BROWSER:-}" ]]; then
+        "$BROWSER" "$url" >/dev/null 2>&1 &
+    elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$url" >/dev/null 2>&1 &
+    elif command -v gio >/dev/null 2>&1; then
+        gio open "$url" >/dev/null 2>&1 &
+    elif command -v open >/dev/null 2>&1; then          # macOS
+        open "$url" >/dev/null 2>&1 &
+    else
+        # Letzter Ausweg: Pythons webbrowser-Modul aus einer der venvs.
+        "$BASE/1-irfanchahyadi-dash/.venv/bin/python" -m webbrowser -t "$url" \
+            >/dev/null 2>&1 &
+    fi
+    disown 2>/dev/null || true
+}
+
+if (( OPEN_BROWSER )) && (( ${#READY_URLS[@]} > 0 )); then
+    if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" && "$(uname)" != "Darwin" ]]; then
+        # Kein Grafik-Display (SSH-Sitzung, Server) - Browser waere sinnlos.
+        info "Kein Display erkannt - Browser wird nicht geoeffnet"
+    else
+        info "Oeffne ${#READY_URLS[@]} Tab(s) im Browser"
+        for url in "${READY_URLS[@]}"; do
+            printf '  %s>%s %s\n' "$B" "$N" "$url"
+            open_url "$url"
+            sleep 1     # kleiner Versatz, sonst verschluckt der Browser Tabs
+        done
+    fi
+fi
 
 echo
 if (( overall == 0 )); then

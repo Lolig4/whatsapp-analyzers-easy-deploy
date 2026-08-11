@@ -1,5 +1,12 @@
 # WhatsApp Chat Analyzer — lokales Offline-Deployment
 
+> **Dieses Deployment wurde von Claude (Anthropic) erstellt** — Einrichtung,
+> Reparatur der Abhängigkeiten, Offline-Umbau, die Skripte `setup.sh` /
+> `start.sh` / `stop.sh`, das Git-Repository samt Commit-Historie und diese
+> README. Der Code der drei Analyzer selbst stammt von den jeweiligen
+> Upstream-Autoren (siehe Tabelle unten); Claudes Änderungen daran sind unten
+> einzeln aufgeführt und liegen als separate Commits vor.
+
 Drei WhatsApp-Chat-Analyzer von GitHub, lokal lauffähig gemacht: je eine eigene
 virtuelle Umgebung, ein eigener Port, und **keinerlei externe Netzwerkzugriffe
 zur Laufzeit**. Internet wird nur einmalig für `setup.sh` gebraucht (pip +
@@ -20,8 +27,16 @@ Netzwerk aus nicht erreichbar.
 
 ```bash
 ./setup.sh     # einmalig: venvs + Abhängigkeiten + Offline-Assets
-./start.sh     # startet alle drei im Hintergrund und prüft die Ports
+./start.sh     # startet alle drei, prüft die Ports, öffnet den Browser
 ./stop.sh      # beendet alle drei
+```
+
+`start.sh` öffnet jede App, die erfolgreich geantwortet hat, im
+Standardbrowser (`$BROWSER`, sonst `xdg-open`/`gio`/`open`, sonst Pythons
+`webbrowser`). Ohne Grafik-Display — etwa über SSH — wird das übersprungen.
+
+```bash
+./start.sh --no-browser    # startet ohne Browser-Tabs
 ```
 
 `setup.sh` ist idempotent — mehrfaches Ausführen schadet nicht. `./setup.sh --force`
@@ -153,18 +168,71 @@ eine projektlokale `.streamlit/config.toml`.
 
 ---
 
-## Offline-Nachweis
+## Sendet irgendetwas Daten nach außen?
 
-Nach `./start.sh` geprüft:
+**Nein.** Ergebnis eines Audits über Projektcode, Bibliotheken, Server und das
+im Browser ausgelieferte JavaScript.
 
-- Projekt 1 liefert im HTML **null** externe URLs aus; Bootstrap, FontAwesome
-  und die Webfonts kommen alle von `localhost:8051`.
-- Projekt 2 und 3 enthalten im HTML nur eine Apache-Lizenz-URL in einem
-  Kommentar — kein Request.
-- `ss -ltn` zeigt für alle drei Ports ausschließlich `127.0.0.1`.
-- `urlextract` (Projekt 2 und 3) lädt **keine** TLD-Liste nach: Version 1.9.0
-  liefert sie im Paket mit (`urlextract/data/tlds-alpha-by-domain.txt`) und lädt
-  nur bei explizitem `.update()`, was keines der Projekte aufruft.
+### Projektcode
+Keines der drei Projekte importiert `requests`, `urllib`, `socket`, `httpx`
+oder ähnliches und macht keinen einzigen ausgehenden Aufruf. Die im Code
+gefundenen URLs sind ausnahmslos Links (`href` auf GitHub/LinkedIn),
+Lizenz-Kommentare oder SVG-Namespaces (`w3.org`) — nichts davon wird
+abgerufen. Alle Chatdaten bleiben im Prozessspeicher bzw. in der lokalen
+SQLite-Datei von Projekt 1.
+
+### Beweis per Netzwerk-Isolation
+Alle drei Apps wurden in einem Netzwerk-Namespace **ohne jeden Netzzugang**
+gestartet (`unshare -rn`, gegengeprüft: `curl` scheitert dort mit Exit 7):
+
+- Alle drei Server kommen hoch und antworten mit HTTP 200.
+- Die komplette Analyse-Pipeline läuft durch — Projekt 1 (Parsing + Charts),
+  Projekt 2 (9 Funktionen), Projekt 3 (10 Funktionen), alle ohne Fehler.
+
+Hätte irgendein Schritt einen Server gebraucht, wäre er dort gescheitert.
+
+### Telemetrie der Bibliotheken
+- **Streamlit** hat eine eingebaute Nutzungsstatistik. Sie ist über
+  `browser.gatherUsageStats = false` in der projektlokalen `.streamlit/config.toml`
+  abgeschaltet — verifiziert mit `streamlit config show`. Im Frontend hängt der
+  Versand an `actuallySendMetrics = gatherUsageStats && metricsUrl !== "off"`,
+  und `gatherUsageStats` kommt vom Server (`app_session.py:1186`). Ist es
+  `false`, wird `data.streamlit.io/metrics.json` nie kontaktiert.
+- Streamlits `credentials.py` kann `data.streamlit.io` aufrufen — aber nur in
+  `_send_email()`, also wenn man beim interaktiven Start eine E-Mail-Adresse
+  einträgt. Im Headless-Modus kehrt die Prüfung vorher zurück; es gibt keinen
+  Prompt und keinen Request.
+- **`urlextract`** (Projekt 2 und 3) lädt **keine** TLD-Liste nach: Version
+  1.9.0 liefert sie im Paket mit (`urlextract/data/tlds-alpha-by-domain.txt`)
+  und lädt nur bei explizitem `.update()` — das ruft keines der Projekte auf.
+- **Dash/Plotly** arbeiten rein lokal; Plotly rendert offline, es gibt keine
+  chart-studio-Anbindung.
+
+### Browser-Seite
+Das gesamte ausgelieferte JavaScript wurde heruntergeladen (Dash 2,6 MB,
+Streamlit 2,2 MB) und auf bekannte Tracker geprüft — Google Analytics,
+Segment, Mixpanel, Amplitude, Sentry, Hotjar, FullStory, PostHog, Datadog,
+Matomo, Facebook und weitere: **keine Treffer**. Die Suchtreffer für
+„amplitude" und „doubleClick" sind Fehlalarme (SVG-Attributname bzw. React
+DOM-Event).
+
+Zwei externe Hosts stecken im Streamlit-Bundle, beide inaktiv:
+`data.streamlit.io` (siehe oben, per Config abgeschaltet) und
+`fonts.gstatic.com`, das nur für Material-Symbol-Icons der Syntax
+`:material/name:` benutzt wird — die kommt in keinem der beiden Projekte vor.
+
+Der Google-Analytics-Block von Projekt 1 wurde entfernt; das ausgelieferte HTML
+enthält davon nur noch den erklärenden Kommentar.
+
+### Netzwerkbindung
+`ss -ltn` zeigt für alle drei Ports ausschließlich `127.0.0.1` — vom Netzwerk
+aus ist keine der Apps erreichbar.
+
+### Was außerhalb dieses Ordners geschrieben wurde
+Nichts, außer dem üblichen pip-Download-Cache unter `~/.cache/pip` beim
+Installieren. Kein `~/.streamlit`, kein `~/.cache/urlextract` — das
+mitgelieferte `setup.sh` der Repos, das nach `~/.streamlit/config.toml`
+geschrieben hätte, wird bewusst nicht benutzt.
 
 ---
 
