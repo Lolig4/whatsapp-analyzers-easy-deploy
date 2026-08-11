@@ -44,16 +44,22 @@ app.index_string = """
     </html>"""
 app.layout = layouts.base
 
-@app.callback([Output('page-content', 'children'), Output('container-data-store', 'children')], [Input('url', 'pathname')])
-def display_page(pathname):
+@app.callback([Output('page-content', 'children'), Output('container-data-store', 'children')],
+              [Input('url', 'pathname')], [State('url', 'search')])
+def display_page(pathname, search):
     """Handle what layout should be display."""
     container_data_store = dash.no_update
     if pathname == '/':
         page_content = layouts.home
     elif pathname.startswith('/groupchat/') or pathname.startswith('/personalchat/'):
         chat_type, url_key = pathname[1:].split('/')
+        # upload_data sets pathname to '<key>?from=landing_page', but dcc.Location
+        # splits the query string off into `search`. Look in both, otherwise a
+        # freshly uploaded chat is treated as a saved one and looked up in the
+        # database - where it does not exist unless "save" was on.
+        url_key = url_key.split('?')[0]
         page_content = layouts.groupchat if chat_type == 'groupchat' else layouts.personalchat
-        if not pathname.endswith(settings.FROM_LANDING_PAGE):
+        if settings.FROM_LANDING_PAGE not in (pathname + (search or '')):
             url, datasets = chat_parser.load_parsed_data(url_key, 'url')
             container_data_store = dcc.Store(id='data-store', data=datasets)
             if url == 'not_found':
