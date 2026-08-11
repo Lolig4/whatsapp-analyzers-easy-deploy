@@ -385,7 +385,11 @@ def award_list(series, n=3):
     trophy_emoji = '\U0001F3C6'
     list_row = []
     try:
-        iterable = series.head(n).iteritems()
+        # Series.iteritems() was removed in pandas 2.0 -> use .items().
+        # The branch relies on .head(n) raising AttributeError for a Counter,
+        # which still holds; with .iteritems() the Series raised it too and
+        # every call fell through to .most_common(), which a Series lacks.
+        iterable = series.head(n).items()
     except AttributeError:
         iterable = series.most_common(n)
     for i, (j, k) in enumerate(iterable):
