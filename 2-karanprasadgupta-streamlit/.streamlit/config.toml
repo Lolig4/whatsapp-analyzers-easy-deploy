@@ -6,7 +6,9 @@
 port = 8502
 address = "localhost"      # local only, not 0.0.0.0
 headless = true            # do not open a browser automatically
-enableCORS = false
+# enableCORS is intentionally left at its default (true): setting it to false
+# while enableXsrfProtection is true makes Streamlit override it anyway and
+# print a warning on every start.
 enableXsrfProtection = true
 fileWatcherType = "none"   # no restart on file changes
 
