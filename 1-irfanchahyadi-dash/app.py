@@ -9,7 +9,15 @@ from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 from src import charts, chat_parser, layouts, settings
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, settings.FONT_AWESOME])
+# Offline: Bootstrap und FontAwesome werden lokal aus assets/vendor/ geladen
+# statt von einem CDN (dbc.themes.BOOTSTRAP zeigt auf jsdelivr).
+# assets_ignore verhindert, dass Dash die vendor-CSS zusaetzlich automatisch
+# einbindet - explizite Reihenfolge: Bootstrap -> FontAwesome -> custom.css.
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[settings.BOOTSTRAP_CSS, settings.FONT_AWESOME],
+    assets_ignore=r"\.vendor\.css$",
+)
 server = app.server
 app.config.suppress_callback_exceptions = True
 
@@ -22,14 +30,8 @@ app.index_string = """
             <title>{%title%}</title>
             {%favicon%}
             {%css%}
-            <!-- Global site tag (gtag.js) - Google Analytics -->
-            <script async src="https://www.googletagmanager.com/gtag/js?id=""" + settings.GA_TRACKING_ID + """"></script>
-            <script>
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '""" + settings.GA_TRACKING_ID + """');
-            </script>
+            <!-- Google-Analytics-Block (gtag.js) entfernt: laedt von
+                 googletagmanager.com und bricht den Offline-Betrieb. -->
         </head>
         <body>
             {%app_entry%}

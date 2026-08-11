@@ -2,10 +2,16 @@ import os, dotenv
 
 dotenv.load_dotenv()
 DATABASE_URL = 'sqlite:///src/wca.db'
-GA_TRACKING_ID = 'UA-41298121-2'
 APP_NAME = 'Whatsapp Chat Analyzer'
 LOGO = '/assets/logo.png'
-FONT_AWESOME = 'https://use.fontawesome.com/releases/v5.10.2/css/all.css'
+
+# Bootstrap und FontAwesome liegen lokal in assets/vendor/ (von setup.sh geholt)
+# statt auf einem CDN. Ohne das laedt die Seite jsdelivr + use.fontawesome.com
+# und ist ohne Internet kaputt.
+BOOTSTRAP_CSS = '/assets/vendor/css/bootstrap.vendor.css'
+FONT_AWESOME = '/assets/vendor/css/fontawesome.vendor.css'
+
+# GA_TRACKING_ID entfernt - Google Analytics wurde aus app.py entfernt.
 SOURCE_CODE_URL = 'https://github.com/irfanchahyadi/Whatsapp-Chat-Analyzer'
 COPYRIGHT = 'Copyright \U000000A9 2020 Irfan Chahyadi'
 COPYRIGHT_URL = SOURCE_CODE_URL + '/blob/master/LICENSE'
