@@ -57,7 +57,10 @@ def preprocess(data):
     users = []
     messages = []
     for message in df['user_message']:
-        entry = re.split('([\w\W]+?):\s', message)
+        # Raw string: '\w' and '\s' are invalid escapes in a normal literal and
+        # raise SyntaxWarning on Python 3.12+ (an error in a future release).
+        # (upstream PR #39)
+        entry = re.split(r'([\w\W]+?):\s', message)
         if entry[1:]:  # user name
             users.append(entry[1])
             messages.append(" ".join(entry[2:]))

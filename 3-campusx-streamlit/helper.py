@@ -88,8 +88,10 @@ def emoji_helper(selected_user,df):
 
     emojis = []
     for message in df['message']:
-        # emoji.UNICODE_EMOJI was removed in emoji 2.0 -> EMOJI_DATA
-        emojis.extend([c for c in message if c in emoji.EMOJI_DATA])
+        # emoji.UNICODE_EMOJI was removed in emoji 2.0. is_emoji() is the
+        # documented public API and gives identical results to looking the
+        # character up in EMOJI_DATA. (upstream PR #23)
+        emojis.extend([c for c in message if emoji.is_emoji(c)])
 
     # columns=[0, 1] so a chat without any emoji still yields a frame with the
     # expected columns instead of an empty one (KeyError: 1 in app.py).

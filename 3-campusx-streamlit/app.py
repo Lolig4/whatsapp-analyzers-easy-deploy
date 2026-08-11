@@ -3,17 +3,29 @@ import preprocessor,helper
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# set_page_config must be the first Streamlit call. "wide" gives the charts
+# room; upstream rendered everything in a narrow centred column. (upstream PR #32)
+st.set_page_config(page_title="WhatsApp Chat Analyzer", layout="wide")
+
 st.sidebar.title("Whatsapp Chat Analyzer")
 
-uploaded_file = st.sidebar.file_uploader("Choose a file")
+# type=["txt"] rejects non-text files in the picker instead of failing later on
+# bytes_data.decode("utf-8"). (upstream PR #32)
+uploaded_file = st.sidebar.file_uploader("Choose a file", type=["txt"])
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
     data = bytes_data.decode("utf-8")
-    df = preprocessor.preprocess(data)
+    # Parsing a large export takes a moment - show that something is happening.
+    # (upstream PR #32)
+    with st.spinner("Processing chat data..."):
+        df = preprocessor.preprocess(data)
 
     # fetch unique users
     user_list = df['user'].unique().tolist()
-    user_list.remove('group_notification')
+    # A chat without any system message has no 'group_notification' entry, and
+    # the bare .remove() raised ValueError. (upstream PRs #32, #38, #39)
+    if 'group_notification' in user_list:
+        user_list.remove('group_notification')
     user_list.sort()
     user_list.insert(0,"Overall")
 
@@ -26,18 +38,16 @@ if uploaded_file is not None:
         st.title("Top Statistics")
         col1, col2, col3, col4 = st.columns(4)
 
-        with col1:
-            st.header("Total Messages")
-            st.title(num_messages)
-        with col2:
-            st.header("Total Words")
-            st.title(words)
-        with col3:
-            st.header("Media Shared")
-            st.title(num_media_messages)
-        with col4:
-            st.header("Links Shared")
-            st.title(num_links)
+        # st.metric renders label and value as one unit and does not break the
+        # layout on long numbers the way header+title did. (upstream PR #32)
+        col1.metric("Total Messages", num_messages)
+        col2.metric("Total Words", words)
+        col3.metric("Media Shared", num_media_messages)
+        col4.metric("Links Shared", num_links)
+
+        # Every figure below is closed right after st.pyplot(). Streamlit re-runs
+        # this script on each interaction, so unclosed figures pile up until
+        # matplotlib warns about more than 20 open figures. (upstream PR #38)
 
         # monthly timeline
         st.title("Monthly Timeline")
@@ -46,6 +56,7 @@ if uploaded_file is not None:
         ax.plot(timeline['time'], timeline['message'],color='green')
         plt.xticks(rotation='vertical')
         st.pyplot(fig)
+        plt.close(fig)
 
         # daily timeline
         st.title("Daily Timeline")
@@ -54,6 +65,7 @@ if uploaded_file is not None:
         ax.plot(daily_timeline['only_date'], daily_timeline['message'], color='black')
         plt.xticks(rotation='vertical')
         st.pyplot(fig)
+        plt.close(fig)
 
         # activity map
         st.title('Activity Map')
@@ -66,6 +78,7 @@ if uploaded_file is not None:
             ax.bar(busy_day.index,busy_day.values,color='purple')
             plt.xticks(rotation='vertical')
             st.pyplot(fig)
+            plt.close(fig)
 
         with col2:
             st.header("Most busy month")
@@ -74,12 +87,14 @@ if uploaded_file is not None:
             ax.bar(busy_month.index, busy_month.values,color='orange')
             plt.xticks(rotation='vertical')
             st.pyplot(fig)
+            plt.close(fig)
 
         st.title("Weekly Activity Map")
         user_heatmap = helper.activity_heatmap(selected_user,df)
         fig,ax = plt.subplots()
         ax = sns.heatmap(user_heatmap)
         st.pyplot(fig)
+        plt.close(fig)
 
         # finding the busiest users in the group(Group level)
         if selected_user == 'Overall':
@@ -93,6 +108,7 @@ if uploaded_file is not None:
                 ax.bar(x.index, x.values,color='red')
                 plt.xticks(rotation='vertical')
                 st.pyplot(fig)
+                plt.close(fig)
             with col2:
                 st.dataframe(new_df)
 
@@ -102,6 +118,7 @@ if uploaded_file is not None:
         fig,ax = plt.subplots()
         ax.imshow(df_wc)
         st.pyplot(fig)
+        plt.close(fig)
 
         # most common words
         most_common_df = helper.most_common_words(selected_user,df)
@@ -113,6 +130,7 @@ if uploaded_file is not None:
 
         st.title('Most commmon words')
         st.pyplot(fig)
+        plt.close(fig)
 
         # emoji analysis
         emoji_df = helper.emoji_helper(selected_user,df)
@@ -129,16 +147,8 @@ if uploaded_file is not None:
                 st.info("No emoji found in this chat.")
             else:
                 fig,ax = plt.subplots()
-                ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f")
+                # "%0.2f%%" prints the percent sign the slice labels imply;
+                # upstream showed a bare number. (upstream PR #28)
+                ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f%%")
                 st.pyplot(fig)
-
-
-
-
-
-
-
-
-
-
-
+                plt.close(fig)
