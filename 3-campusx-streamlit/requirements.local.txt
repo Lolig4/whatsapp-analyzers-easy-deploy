@@ -1,0 +1,16 @@
+# Lokale Abhaengigkeiten (Original: requirements.txt, unveraendert)
+#
+# Aenderungen gegenueber dem Original:
+#   - numpy ERGAENZT : indirekt ueber matplotlib/pandas benutzt, jetzt explizit.
+# emoji bleibt ungepinnt (aktuelle Version); dafuer wurde helper.py:88 von der
+# entfernten API emoji.UNICODE_EMOJI['en'] auf emoji.EMOJI_DATA umgestellt
+# (Backup: helper.py.orig).
+
+streamlit
+pandas
+numpy
+matplotlib
+seaborn
+wordcloud
+urlextract
+emoji
