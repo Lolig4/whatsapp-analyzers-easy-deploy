@@ -13,13 +13,19 @@
 #   - SQLAlchemy GEPINNT <2.0: SQLAlchemy 2.x verbietet con.execute("<raw sql>", params),
 #                              genau das macht src/db_handler.py.
 #   - numpy ERGAENZT         : wird in src/charts.py und app.py benutzt, fehlte.
+#   - pandas GEPINNT auf <3  : pandas 3.0 castet bei .loc-Zuweisung eine leere
+#                              float64-Spalte nicht mehr still auf object hoch,
+#                              sondern wirft TypeError. Genau das macht
+#                              src/chat_parser.py beim Zerlegen der Events:
+#                                df.loc[df.category == 'Event', 'contact'], ... = zip(*...)
+#                              -> "Invalid value (...) for dtype 'float64'"
 
 dash>=2.16,<3
 dash-bootstrap-components>=1.5,<2
 dash-cytoscape
 dash-daq
 plotly
-pandas
+pandas>=2.0,<3
 numpy
 python-dotenv
 SQLAlchemy<2.0
