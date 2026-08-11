@@ -31,8 +31,7 @@ tail -f logs/*.log         # follow the logs
 
 `start.sh` logs to `logs/` and writes a PID to `pids/` per app, waits up to 90s
 each for an HTTP response, and exits non-zero if one fails. Apps that answered
-open in the default browser (`$BROWSER`, else `xdg-open` / `gio` / `open`);
-skipped without a graphical display.
+open in the default browser; skipped without a graphical display.
 
 **Usage:** all three want a WhatsApp `.txt` export (*Chat → More → Export chat →
 Without media*). Project 1 takes it via drag-and-drop, projects 2 and 3 through
@@ -40,11 +39,11 @@ the sidebar file dialog — there you also have to click **"Show Analysis"**.
 
 ## Python version
 
-The venvs are built with **Python 3.11**, not the system default. These projects
-are from 2020–2023 (project 1 pins Python 3.10 in its `runtime.txt`) and their
-dependency trees frequently have no wheels on very new Python. `setup.sh` looks
-for `python3.11`, `python3.12`, `python3.10` in that order; override with
-`PYTHON=/path/to/python3.11 ./setup.sh`. Nothing on the system is modified.
+The venvs are built with **Python 3.11**, not the system default: these projects
+are from 2020–2023 and their dependency trees frequently have no wheels on very
+new Python. `setup.sh` looks for `python3.11`, `python3.12`, `python3.10` in that
+order; override with `PYTHON=/path/to/python3.11 ./setup.sh`. Nothing on the
+system is modified.
 
 ## What was changed
 
@@ -60,16 +59,22 @@ the three `vendor:` commits hold the pristine upstream code.
   `dash-bootstrap-components<2` (needs Dash 3), `SQLAlchemy<2.0` (2.x forbids
   the raw-string `con.execute()` in `db_handler.py`), `pandas<3` (see below).
   Added `numpy`.
-- Offline: Google Analytics block removed from `app.py`; Bootstrap and
-  FontAwesome served from `assets/vendor/` instead of jsdelivr and
-  use.fontawesome.com. `assets_ignore=r"\.vendor\.css$"` is required, or Dash
-  auto-includes the vendor CSS again *after* `custom.css` and Bootstrap
+- Offline: Google Analytics removed from `app.py`; Bootstrap and FontAwesome
+  served from `assets/vendor/`. `assets_ignore=r"\.vendor\.css$"` is required,
+  or Dash auto-includes the vendor CSS again *after* `custom.css` and Bootstrap
   overrides the project's styling.
 - `app.run_server(debug=True)` → `app.run(host, port, debug=False)`, host/port
   from `settings.py` (`WCA_HOST` / `WCA_PORT`, default `127.0.0.1:8051`).
+- Four crashes that made the analysis view unreachable: `Series.iteritems()`
+  (removed in pandas 2.0) broke `award_list()` and with it every analysis page;
+  `db_handler.get_chat()` returned 2 values instead of 3 for unknown keys;
+  `display_page()` missed the `?from=landing_page` marker because `dcc.Location`
+  moves it into `search`, so a fresh upload was looked up in the database and
+  never rendered; and `Counter(...list_link.sum())` broke on chats without links.
 
 **Project 2 (Streamlit)** — added `numpy` (imported by `main.py`, missing from
-the list). No code change needed.
+the list). Note its whole script body sits in one `except Exception` printing
+"Unable to Process Your Request", so failures there are invisible.
 
 **Project 3 (Streamlit)** — `helper.py:88`: `emoji.UNICODE_EMOJI['en']` →
 `emoji.EMOJI_DATA`, removed in emoji 2.0; with a current `emoji` package the
@@ -84,33 +89,33 @@ German export.
 
 **Both Streamlit projects** — their bundled `setup.sh` is unused: it wrote to
 `~/.streamlit/config.toml` (global, outside this folder) and took the port from
-`$PORT`. Replaced by a project-local `.streamlit/config.toml`.
+`$PORT`. Replaced by a project-local `.streamlit/config.toml`. Both also
+crashed on chats without emoji (`KeyError: 1` from a column-less DataFrame, then
+`ax.pie` on empty data) — they now say "No emoji found in this chat."
 
 ## Does anything send data out? No.
 
 Audited across project code, libraries, server and the JavaScript served to the
 browser:
 
-- **Project code** imports no networking module at all and makes no outbound
-  calls. The URLs in the code are `href` links, license comments and SVG
-  namespaces — none are fetched.
-- **Proof by isolation**: all three were run in a network namespace with no
-  network access (`unshare -rn`; verified that `curl` fails there). All three
-  serve HTTP 200 and the full analysis pipeline completes — project 1 (parsing
-  + charts), project 2 (9 functions), project 3 (10 functions).
-- **Streamlit telemetry** is off via `browser.gatherUsageStats = false`
-  (verified with `streamlit config show`). The frontend gates sending on
-  `actuallySendMetrics = gatherUsageStats && metricsUrl !== "off"`, and that
-  flag comes from the server (`app_session.py:1186`). The other
-  `data.streamlit.io` call sits in `_send_email()` and only fires if you type an
-  email at the interactive prompt — headless returns before that.
+- **Project code** imports no networking module and makes no outbound calls. The
+  URLs in it are `href` links, license comments and SVG namespaces — none fetched.
+- **Proof by isolation**: all three run in a network namespace with no network
+  access (`unshare -rn`; `curl` verified to fail there). All three serve HTTP 200
+  and the full analysis pipeline completes.
+- **Streamlit telemetry** is off via `browser.gatherUsageStats = false` (verified
+  with `streamlit config show`). The frontend gates sending on
+  `actuallySendMetrics = gatherUsageStats && metricsUrl !== "off"`, and that flag
+  comes from the server (`app_session.py:1186`). The other `data.streamlit.io`
+  call sits in `_send_email()` and only fires if you type an email at the
+  interactive prompt — headless returns before that.
 - **`urlextract`** downloads no TLD list: 1.9.0 ships one and only fetches on an
   explicit `.update()`, which neither project calls.
 - **Browser side**: all served JavaScript (Dash 2.6 MB, Streamlit 2.2 MB) was
   scanned for Google Analytics, Segment, Mixpanel, Amplitude, Sentry, Hotjar,
   FullStory, PostHog, Datadog, Matomo, Facebook and more — no hits. Streamlit's
-  `fonts.gstatic.com` reference only serves `:material/name:` icons, unused
-  here. Nothing was written outside this folder apart from `~/.cache/pip`.
+  `fonts.gstatic.com` reference only serves `:material/name:` icons, unused here.
+  Nothing was written outside this folder apart from `~/.cache/pip`.
 
 `.gitignore` also excludes `*_chat.txt` and `WhatsApp Chat*.txt`, so a private
 export cannot land in git by accident.
@@ -129,9 +134,8 @@ that encode English word order (`X created group "Y"` vs `X hat die Gruppe "Y"
 erstellt`). They fall through to raw text instead of becoming typed events;
 nothing breaks and personal chats are unaffected.
 
-**Ambiguous date formats.** `20.12.25` is unambiguous, but `03/04/25` could be
-either day- or month-first. Projects 2 and 3 try day-first layouts first,
-matching what upstream assumed; project 2 additionally has a `dd-mm-yy` /
+**Ambiguous date formats.** `03/04/25` could be day- or month-first. Projects 2
+and 3 try day-first first, as upstream assumed; project 2 has a `dd-mm-yy` /
 `mm-dd-yy` toggle in its UI.
 
 **Project 1 breaks on pandas 3**, hence the `<3` pin (installed: 2.3.3). Every
@@ -141,9 +145,8 @@ Projects 2 and 3 are unaffected and run on pandas 3.
 
 **Project 1's "Save" switch is broken.** `db_handler.add_chat()` writes
 PostgreSQL-dialect SQL (`%s` placeholders) against SQLite:
-`sqlite3.OperationalError: near "%": syntax error`. Upstream this ran on Heroku
-Postgres. Only affects URL sharing; the analysis works with the switch off (the
-default). Not patched.
+`sqlite3.OperationalError: near "%": syntax error`. Only affects URL sharing;
+the analysis works with the switch off (the default). Not patched.
 
 **Busy ports.** `start.sh` skips apps whose port is taken. Find leftovers with
 `ss -ltnp | grep -E ':(8051|8502|8503)'`.
