@@ -51,7 +51,10 @@ def get_chat(url):
     if len(chat_id) > 0:
         return get_df(f'select * from chat where id_chat={chat_id[0][0]};'), chat_id[0][1], chat_id[0][2]
     else:
-        return pd.DataFrame(), 'not_found'
+        # Must be three values: every caller unpacks df, chat_type, lang.
+        # Returning two raised "not enough values to unpack (expected 3, got 2)"
+        # and turned an unknown chat key into an HTTP 500.
+        return pd.DataFrame(), 'not_found', 'not_found'
 
 def add_chat(df, lang, chat_type, url):
     """Save chat history into database."""
