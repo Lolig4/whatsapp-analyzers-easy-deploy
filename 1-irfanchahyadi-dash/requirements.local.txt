@@ -1,0 +1,26 @@
+# Lokale, reparierte Abhaengigkeiten (Original: requirements.txt, unveraendert)
+#
+# Aenderungen gegenueber dem Original:
+#   - psycopg2 ENTFERNT      : App nutzt SQLite (settings.DATABASE_URL = sqlite:///src/wca.db),
+#                              psycopg2 braucht libpq-devel und wird nie importiert.
+#   - dash-core-components   \
+#     dash-html-components    > ENTFERNT: seit Dash 2.0 leere Stub-Pakete,
+#     dash-renderer           / der Code nutzt "from dash import dcc/html".
+#     dash-table             /
+#   - gunicorn ENTFERNT      : nur fuer das Heroku-Deployment (Procfile), lokal unnoetig.
+#   - dash GEPINNT auf <3    : Dash 3.x hat app.run_server() entfernt.
+#   - dash-bootstrap-components GEPINNT auf <2 : dbc 2.x verlangt Dash 3.
+#   - SQLAlchemy GEPINNT <2.0: SQLAlchemy 2.x verbietet con.execute("<raw sql>", params),
+#                              genau das macht src/db_handler.py.
+#   - numpy ERGAENZT         : wird in src/charts.py und app.py benutzt, fehlte.
+
+dash>=2.16,<3
+dash-bootstrap-components>=1.5,<2
+dash-cytoscape
+dash-daq
+plotly
+pandas
+numpy
+python-dotenv
+SQLAlchemy<2.0
+wordcloud
