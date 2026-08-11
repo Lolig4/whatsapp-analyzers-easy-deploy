@@ -1,10 +1,9 @@
-# Lokale Abhaengigkeiten (Original: requirements.txt, unveraendert)
+# Local dependencies (original: requirements.txt, left untouched)
 #
-# Aenderungen gegenueber dem Original:
-#   - numpy ERGAENZT : indirekt ueber matplotlib/pandas benutzt, jetzt explizit.
-# emoji bleibt ungepinnt (aktuelle Version); dafuer wurde helper.py:88 von der
-# entfernten API emoji.UNICODE_EMOJI['en'] auf emoji.EMOJI_DATA umgestellt
-# (Backup: helper.py.orig).
+# Changes compared to the original:
+#   - numpy ADDED : used indirectly via matplotlib/pandas, now explicit.
+# emoji stays unpinned (current version); in exchange helper.py:88 was moved
+# from the removed API emoji.UNICODE_EMOJI['en'] to emoji.EMOJI_DATA.
 
 streamlit
 pandas

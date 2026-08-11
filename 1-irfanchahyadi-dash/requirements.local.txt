@@ -1,22 +1,24 @@
-# Lokale, reparierte Abhaengigkeiten (Original: requirements.txt, unveraendert)
+# Local, repaired dependencies (original: requirements.txt, left untouched)
 #
-# Aenderungen gegenueber dem Original:
-#   - psycopg2 ENTFERNT      : App nutzt SQLite (settings.DATABASE_URL = sqlite:///src/wca.db),
-#                              psycopg2 braucht libpq-devel und wird nie importiert.
+# Changes compared to the original:
+#   - psycopg2 REMOVED       : the app uses SQLite (settings.DATABASE_URL =
+#                              sqlite:///src/wca.db). psycopg2 needs libpq-devel
+#                              to build and is never imported.
 #   - dash-core-components   \
-#     dash-html-components    > ENTFERNT: seit Dash 2.0 leere Stub-Pakete,
-#     dash-renderer           / der Code nutzt "from dash import dcc/html".
+#     dash-html-components    > REMOVED: empty stub packages since Dash 2.0,
+#     dash-renderer           / the code already uses "from dash import dcc/html".
 #     dash-table             /
-#   - gunicorn ENTFERNT      : nur fuer das Heroku-Deployment (Procfile), lokal unnoetig.
-#   - dash GEPINNT auf <3    : Dash 3.x hat app.run_server() entfernt.
-#   - dash-bootstrap-components GEPINNT auf <2 : dbc 2.x verlangt Dash 3.
-#   - SQLAlchemy GEPINNT <2.0: SQLAlchemy 2.x verbietet con.execute("<raw sql>", params),
-#                              genau das macht src/db_handler.py.
-#   - numpy ERGAENZT         : wird in src/charts.py und app.py benutzt, fehlte.
-#   - pandas GEPINNT auf <3  : pandas 3.0 castet bei .loc-Zuweisung eine leere
-#                              float64-Spalte nicht mehr still auf object hoch,
-#                              sondern wirft TypeError. Genau das macht
-#                              src/chat_parser.py beim Zerlegen der Events:
+#   - gunicorn REMOVED       : only for the Heroku deployment (Procfile).
+#   - dash PINNED to <3      : Dash 3.x removed app.run_server().
+#   - dash-bootstrap-components PINNED to <2 : dbc 2.x requires Dash 3.
+#   - SQLAlchemy PINNED <2.0 : SQLAlchemy 2.x forbids con.execute("<raw sql>",
+#                              params), which is exactly what src/db_handler.py
+#                              does.
+#   - numpy ADDED            : used in src/charts.py and app.py, was missing.
+#   - pandas PINNED to <3    : pandas 3.0 no longer silently upcasts an empty
+#                              float64 column on .loc assignment, it raises
+#                              TypeError instead. src/chat_parser.py does that
+#                              when splitting events:
 #                                df.loc[df.category == 'Event', 'contact'], ... = zip(*...)
 #                              -> "Invalid value (...) for dtype 'float64'"
 

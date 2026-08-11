@@ -1,9 +1,10 @@
-# Lokale Abhaengigkeiten (Original: requirements.txt, unveraendert)
+# Local dependencies (original: requirements.txt, left untouched)
 #
-# Aenderungen gegenueber dem Original:
-#   - numpy ERGAENZT : wird in main.py importiert, fehlte in requirements.txt
-#                      (kam bisher nur zufaellig als pandas-Abhaengigkeit mit).
-# Sonst identisch - der Code nutzt bereits die aktuelle emoji-API (emoji.EMOJI_DATA).
+# Changes compared to the original:
+#   - numpy ADDED : imported by main.py but missing from requirements.txt
+#                   (it only came along as a transitive pandas dependency).
+# Otherwise identical - the code already uses the current emoji API
+# (emoji.EMOJI_DATA), so no version pins are needed.
 
 streamlit
 pandas

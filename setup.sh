@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 #
-# setup.sh - One-Click-Einrichtung aller drei WhatsApp-Chat-Analyzer.
+# setup.sh - one-click setup for all three WhatsApp chat analyzers.
 #
-# Legt pro Projekt eine isolierte venv an, installiert die Abhaengigkeiten aus
-# requirements.local.txt und holt die CDN-Assets von Projekt 1 nach lokal.
-# Idempotent: mehrfaches Ausfuehren ist unschaedlich.
+# Creates an isolated venv per project, installs the dependencies from
+# requirements.local.txt and fetches project 1's CDN assets for local use.
+# Idempotent: running it more than once is harmless.
 #
-# Braucht Internet (pip + Vendor-Assets). Danach laufen die Apps vollstaendig
-# offline.
+# Needs internet (pip + vendor assets). Afterwards the apps run fully offline.
 #
-#   ./setup.sh            normale Einrichtung
-#   ./setup.sh --force    venvs vorher loeschen und neu bauen
+#   ./setup.sh            normal setup
+#   ./setup.sh --force    delete and rebuild the venvs first
 #
 set -Eeuo pipefail
 
@@ -24,7 +23,7 @@ P3="3-campusx-streamlit"
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
 
-# --- huebsche Ausgabe ---------------------------------------------------------
+# --- output helpers -----------------------------------------------------------
 if [[ -t 1 ]]; then
     B=$'\033[1m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; N=$'\033[0m'
 else
@@ -33,14 +32,14 @@ fi
 info() { printf '%s==>%s %s\n' "$B" "$N" "$*"; }
 ok()   { printf '  %s+%s %s\n' "$G" "$N" "$*"; }
 warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*"; }
-die()  { printf '%sFEHLER:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+die()  { printf '%sERROR:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 
-trap 'die "abgebrochen in Zeile $LINENO"' ERR
+trap 'die "aborted at line $LINENO"' ERR
 
-# --- 1. Python-Interpreter bestimmen -----------------------------------------
-# Die Projekte stammen von 2020-2023 (Projekt 1 nennt Python 3.10 in
-# runtime.txt). Wir bevorzugen 3.11: neuer Python (3.13/3.14) hat bei diesen
-# aelteren Abhaengigkeitsbaeumen regelmaessig keine passenden Wheels.
+# --- 1. pick a Python interpreter ---------------------------------------------
+# These projects are from 2020-2023 (project 1 pins Python 3.10 in runtime.txt).
+# Prefer 3.11: on very new Python (3.13/3.14) their dependency trees regularly
+# have no matching wheels.
 find_python() {
     local candidate
     for candidate in python3.11 python3.12 python3.10; do
@@ -52,13 +51,13 @@ find_python() {
 }
 
 PYTHON="${PYTHON:-$(find_python || true)}"
-[[ -n "$PYTHON" ]] || die "Kein Python 3.10-3.12 gefunden.
-Bitte installieren (Fedora: sudo dnf install python3.11) oder setzen:
-  PYTHON=/pfad/zu/python3.11 ./setup.sh"
+[[ -n "$PYTHON" ]] || die "No Python 3.10-3.12 found.
+Install one (Fedora: sudo dnf install python3.11) or point at it explicitly:
+  PYTHON=/path/to/python3.11 ./setup.sh"
 
 info "Python: $PYTHON ($("$PYTHON" --version 2>&1))"
 
-# --- 2. venv + Abhaengigkeiten pro Projekt ------------------------------------
+# --- 2. venv + dependencies per project ---------------------------------------
 setup_project() {
     local dir="$1"
     local venv="$BASE/$dir/.venv"
@@ -66,35 +65,35 @@ setup_project() {
 
     info "$dir"
 
-    [[ -d "$BASE/$dir" ]] || die "Projektordner fehlt: $dir"
-    [[ -f "$req" ]] || die "requirements.local.txt fehlt in $dir"
+    [[ -d "$BASE/$dir" ]] || die "project directory missing: $dir"
+    [[ -f "$req" ]] || die "requirements.local.txt missing in $dir"
 
     if (( FORCE )) && [[ -d "$venv" ]]; then
-        warn "loesche vorhandene venv (--force)"
+        warn "removing existing venv (--force)"
         rm -rf "$venv"
     fi
 
     if [[ ! -x "$venv/bin/python" ]]; then
-        "$PYTHON" -m venv "$venv" || die "venv-Erstellung fehlgeschlagen in $dir"
-        ok "venv angelegt"
+        "$PYTHON" -m venv "$venv" || die "venv creation failed in $dir"
+        ok "venv created"
     else
-        ok "venv vorhanden"
+        ok "venv present"
     fi
 
     "$venv/bin/python" -m pip install --quiet --upgrade pip
     "$venv/bin/python" -m pip install --quiet -r "$req" \
-        || die "pip install fehlgeschlagen in $dir"
-    ok "Abhaengigkeiten installiert"
+        || die "pip install failed in $dir"
+    ok "dependencies installed"
 }
 
 setup_project "$P1"
 setup_project "$P2"
 setup_project "$P3"
 
-# --- 3. Offline-Assets fuer Projekt 1 ----------------------------------------
-# Projekt 1 laedt im Original Bootstrap (jsdelivr) und FontAwesome
-# (use.fontawesome.com) per CDN. Ohne Netz waere das Layout kaputt und die
-# Icons fehlten, deshalb einmalig lokal ablegen.
+# --- 3. offline assets for project 1 ------------------------------------------
+# Upstream, project 1 loads Bootstrap (jsdelivr) and FontAwesome
+# (use.fontawesome.com) from a CDN. Without network the layout would be broken
+# and all icons missing, so fetch them once and serve them locally.
 BOOTSTRAP_VER="5.3.3"
 FA_VER="5.15.4"
 VENDOR="$BASE/$P1/assets/vendor"
@@ -104,34 +103,34 @@ fetch() {
     [[ -s "$dest" ]] && return 0
     mkdir -p "$(dirname "$dest")"
     curl -fsSL --retry 3 --connect-timeout 20 -o "$dest.tmp" "$url" \
-        || { rm -f "$dest.tmp"; die "Download fehlgeschlagen: $url"; }
+        || { rm -f "$dest.tmp"; die "download failed: $url"; }
     mv "$dest.tmp" "$dest"
 }
 
-info "Offline-Assets fuer $P1"
+info "Offline assets for $P1"
 if [[ -s "$VENDOR/css/bootstrap.vendor.css" && -s "$VENDOR/css/fontawesome.vendor.css" ]]; then
-    ok "Vendor-Assets bereits vorhanden"
+    ok "vendor assets already present"
 else
     fetch "https://cdn.jsdelivr.net/npm/bootstrap@${BOOTSTRAP_VER}/dist/css/bootstrap.min.css" \
           "$VENDOR/css/bootstrap.vendor.css"
     ok "Bootstrap ${BOOTSTRAP_VER}"
 
-    # FontAwesome-CSS referenziert die Schriften relativ als ../webfonts/*,
-    # deshalb muss webfonts/ ein Geschwisterordner von css/ sein.
+    # The FontAwesome CSS references its fonts relatively as ../webfonts/*, so
+    # webfonts/ has to be a sibling directory of css/.
     fetch "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/${FA_VER}/css/all.min.css" \
           "$VENDOR/css/fontawesome.vendor.css"
-    # Nur die tatsaechlich benutzten Familien: fas (solid) und fab (brands).
+    # Only the families actually used: fas (solid) and fab (brands).
     for f in fa-solid-900 fa-brands-400 fa-regular-400; do
         for ext in woff2 woff ttf; do
             fetch "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/${FA_VER}/webfonts/${f}.${ext}" \
                   "$VENDOR/webfonts/${f}.${ext}"
         done
     done
-    ok "FontAwesome ${FA_VER} inkl. Webfonts"
+    ok "FontAwesome ${FA_VER} incl. webfonts"
 fi
 
-# --- 4. Kurzer Importtest -----------------------------------------------------
-info "Importtest"
+# --- 4. quick import check ----------------------------------------------------
+info "Import check"
 "$BASE/$P1/.venv/bin/python" -c "import dash, dash_bootstrap_components, dash_cytoscape, dash_daq, sqlalchemy, wordcloud" \
     && ok "$P1"
 "$BASE/$P2/.venv/bin/python" -c "import streamlit, pandas, matplotlib, seaborn, wordcloud, urlextract, emoji" \
@@ -140,4 +139,4 @@ info "Importtest"
     && ok "$P3"
 
 echo
-printf '%sSetup fertig.%s Jetzt starten mit:  ./start.sh\n' "$G" "$N"
+printf '%sSetup complete.%s Start everything with:  ./start.sh\n' "$G" "$N"

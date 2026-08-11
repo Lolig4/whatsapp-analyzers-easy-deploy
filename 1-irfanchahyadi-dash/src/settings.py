@@ -5,18 +5,18 @@ DATABASE_URL = 'sqlite:///src/wca.db'
 APP_NAME = 'Whatsapp Chat Analyzer'
 LOGO = '/assets/logo.png'
 
-# Bindeadresse und Port fuer den lokalen Betrieb; per Umgebungsvariable
-# ueberschreibbar (start.sh setzt sie).
+# Bind address and port for local operation; overridable via environment
+# variables (start.sh sets them).
 HOST = os.environ.get('WCA_HOST', '127.0.0.1')
 PORT = int(os.environ.get('WCA_PORT', '8051'))
 
-# Bootstrap und FontAwesome liegen lokal in assets/vendor/ (von setup.sh geholt)
-# statt auf einem CDN. Ohne das laedt die Seite jsdelivr + use.fontawesome.com
-# und ist ohne Internet kaputt.
+# Bootstrap and FontAwesome live locally in assets/vendor/ (fetched by setup.sh)
+# instead of on a CDN. Without this the page pulls jsdelivr +
+# use.fontawesome.com and is broken without internet.
 BOOTSTRAP_CSS = '/assets/vendor/css/bootstrap.vendor.css'
 FONT_AWESOME = '/assets/vendor/css/fontawesome.vendor.css'
 
-# GA_TRACKING_ID entfernt - Google Analytics wurde aus app.py entfernt.
+# GA_TRACKING_ID removed - Google Analytics was taken out of app.py.
 SOURCE_CODE_URL = 'https://github.com/irfanchahyadi/Whatsapp-Chat-Analyzer'
 COPYRIGHT = 'Copyright \U000000A9 2020 Irfan Chahyadi'
 COPYRIGHT_URL = SOURCE_CODE_URL + '/blob/master/LICENSE'

@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
 #
-# start.sh - startet alle drei Analyzer gleichzeitig im Hintergrund.
+# start.sh - start all three analyzers at once, in the background.
 #
 #   1-irfanchahyadi-dash          Dash        http://localhost:8051
 #   2-karanprasadgupta-streamlit  Streamlit   http://localhost:8502
 #   3-campusx-streamlit           Streamlit   http://localhost:8503
 #
-# Sobald eine App antwortet, wird sie im Standardbrowser geoeffnet.
+# Every app that answers is opened in the default browser.
 #
-#   ./start.sh                startet alles und oeffnet den Browser
-#   ./start.sh --no-browser   startet alles ohne Browser (z.B. auf einem Server)
+#   ./start.sh                start everything and open the browser
+#   ./start.sh --no-browser   start without opening tabs (e.g. on a server)
 #
-# Logs   : logs/<projekt>.log
-# PIDs   : pids/<projekt>.pid
-# Stoppen: ./stop.sh
+# Logs : logs/<app>.log
+# PIDs : pids/<app>.pid
+# Stop : ./stop.sh
 #
 set -Eeuo pipefail
 
-# Job-Control einschalten: dadurch bekommt jeder Hintergrundjob eine EIGENE
-# Prozessgruppe (pgid == pid). Ohne das landen alle drei Apps in der
-# Prozessgruppe dieses Skripts - stop.sh beendet dann beim Stoppen der ersten
-# App unabsichtlich auch die beiden anderen.
+# Enable job control so every background job gets its OWN process group
+# (pgid == pid). Without it all three apps share this script's process group,
+# and stop.sh would kill all of them while stopping just the first one.
 set -m
 
 BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,24 +38,24 @@ else
     B=""; G=""; Y=""; R=""; N=""
 fi
 info() { printf '%s==>%s %s\n' "$B" "$N" "$*"; }
-die()  { printf '%sFEHLER:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+die()  { printf '%sERROR:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 
-# name | verzeichnis | port
+# name | directory | port
 APPS=(
     "dash-irfanchahyadi|1-irfanchahyadi-dash|8051"
     "streamlit-karanprasadgupta|2-karanprasadgupta-streamlit|8502"
     "streamlit-campusx|3-campusx-streamlit|8503"
 )
 
-# --- Vorbedingungen -----------------------------------------------------------
+# --- preconditions ------------------------------------------------------------
 for entry in "${APPS[@]}"; do
     IFS='|' read -r name dir port <<< "$entry"
     [[ -x "$BASE/$dir/.venv/bin/python" ]] \
-        || die "venv fehlt in $dir - bitte zuerst ./setup.sh ausfuehren."
+        || die "venv missing in $dir - run ./setup.sh first."
 done
 
 port_busy() {
-    # 0 = belegt. Bevorzugt ss, faellt sonst auf Python zurueck.
+    # 0 = busy. Prefers ss, falls back to Python.
     local port="$1"
     if command -v ss >/dev/null 2>&1; then
         ss -ltn "sport = :$port" 2>/dev/null | grep -q LISTEN
@@ -74,37 +73,37 @@ PY
     fi
 }
 
-# --- Starten ------------------------------------------------------------------
+# --- start --------------------------------------------------------------------
 start_app() {
     local name="$1" dir="$2" port="$3"
     local log="$LOG_DIR/$name.log"
     local pidfile="$PID_DIR/$name.pid"
     local py="$BASE/$dir/.venv/bin/python"
 
-    # laeuft schon?
+    # already running?
     if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
-        printf '  %s!%s %-28s laeuft bereits (PID %s)\n' "$Y" "$N" "$name" "$(cat "$pidfile")"
+        printf '  %s!%s %-28s already running (PID %s)\n' "$Y" "$N" "$name" "$(cat "$pidfile")"
         return 0
     fi
     if port_busy "$port"; then
-        printf '  %s!%s %-28s Port %s ist von einem Fremdprozess belegt - uebersprungen\n' \
+        printf '  %s!%s %-28s port %s taken by another process - skipped\n' \
                "$Y" "$N" "$name" "$port"
         return 0
     fi
 
-    # Wichtig: aus dem Projektverzeichnis heraus starten.
-    # Beide Streamlit-Apps oeffnen stop_hinglish.txt relativ zum CWD, und
-    # Projekt 1 nutzt den relativen Pfad sqlite:///src/wca.db.
+    # Important: start from inside the project directory.
+    # Both Streamlit apps open stop_hinglish.txt relative to the CWD, and
+    # project 1 uses the relative path sqlite:///src/wca.db.
     (
         cd "$BASE/$dir"
-        # Agg = headless-Backend, sonst versucht matplotlib ein GUI-Backend.
+        # Agg = headless backend, otherwise matplotlib looks for a GUI backend.
         export MPLBACKEND=Agg
         if [[ "$dir" == 1-* ]]; then
-            # Dash: Host/Port kommen aus src/settings.py (env-ueberschreibbar).
+            # Dash: host/port come from src/settings.py (env-overridable).
             WCA_HOST=127.0.0.1 WCA_PORT="$port" \
                 exec "$py" app.py
         else
-            # Streamlit: Flags gewinnen zusaetzlich zu .streamlit/config.toml.
+            # Streamlit: flags win on top of .streamlit/config.toml.
             local entrypoint="main.py"
             [[ -f app.py ]] && entrypoint="app.py"
             exec "$py" -m streamlit run "$entrypoint" \
@@ -116,18 +115,18 @@ start_app() {
     ) >> "$log" 2>&1 &
 
     echo $! > "$pidfile"
-    printf '  %s+%s %-28s PID %-8s Port %s\n' "$G" "$N" "$name" "$!" "$port"
+    printf '  %s+%s %-28s PID %-8s port %s\n' "$G" "$N" "$name" "$!" "$port"
 }
 
-info "Starte alle drei Apps"
+info "Starting all three apps"
 for entry in "${APPS[@]}"; do
     IFS='|' read -r name dir port <<< "$entry"
-    : > "$LOG_DIR/$name.log"          # Log pro Start frisch
+    : > "$LOG_DIR/$name.log"          # fresh log per start
     start_app "$name" "$dir" "$port"
 done
 
-# --- Warten bis die Ports antworten ------------------------------------------
-info "Warte auf HTTP-Antwort (max. 90s)"
+# --- wait until the ports answer ----------------------------------------------
+info "Waiting for HTTP response (up to 90s)"
 overall=0
 READY_URLS=()
 for entry in "${APPS[@]}"; do
@@ -142,7 +141,7 @@ for entry in "${APPS[@]}"; do
             READY_URLS+=("http://localhost:$port")
             up=1; break
         fi
-        # Prozess vorzeitig gestorben?
+        # did the process die early?
         pidfile="$PID_DIR/$name.pid"
         if [[ -f "$pidfile" ]] && ! kill -0 "$(cat "$pidfile")" 2>/dev/null; then
             break
@@ -150,15 +149,14 @@ for entry in "${APPS[@]}"; do
         sleep 1
     done
     if (( ! up )); then
-        printf '  %sx%s %-28s antwortet nicht - siehe logs/%s.log\n' \
+        printf '  %sx%s %-28s no response - see logs/%s.log\n' \
                "$R" "$N" "$name" "$name"
         overall=1
     fi
 done
 
-# --- Im Browser oeffnen -------------------------------------------------------
-# Nur die Apps, die tatsaechlich geantwortet haben - ein Tab auf einen toten
-# Port hilft niemandem.
+# --- open in the browser ------------------------------------------------------
+# Only apps that actually answered - a tab pointing at a dead port helps nobody.
 open_url() {
     local url="$1"
     if [[ -n "${BROWSER:-}" ]]; then
@@ -170,7 +168,7 @@ open_url() {
     elif command -v open >/dev/null 2>&1; then          # macOS
         open "$url" >/dev/null 2>&1 &
     else
-        # Letzter Ausweg: Pythons webbrowser-Modul aus einer der venvs.
+        # Last resort: Python's webbrowser module from one of the venvs.
         "$BASE/1-irfanchahyadi-dash/.venv/bin/python" -m webbrowser -t "$url" \
             >/dev/null 2>&1 &
     fi
@@ -179,32 +177,32 @@ open_url() {
 
 if (( OPEN_BROWSER )) && (( ${#READY_URLS[@]} > 0 )); then
     if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" && "$(uname)" != "Darwin" ]]; then
-        # Kein Grafik-Display (SSH-Sitzung, Server) - Browser waere sinnlos.
-        info "Kein Display erkannt - Browser wird nicht geoeffnet"
+        # No graphical display (SSH session, server) - a browser makes no sense.
+        info "No display detected - not opening a browser"
     else
-        info "Oeffne ${#READY_URLS[@]} Tab(s) im Browser"
+        info "Opening ${#READY_URLS[@]} tab(s) in the browser"
         for url in "${READY_URLS[@]}"; do
             printf '  %s>%s %s\n' "$B" "$N" "$url"
             open_url "$url"
-            sleep 1     # kleiner Versatz, sonst verschluckt der Browser Tabs
+            sleep 1     # small stagger, some browsers swallow rapid-fire calls
         done
     fi
 fi
 
 echo
 if (( overall == 0 )); then
-    printf '%sAlle drei laufen.%s\n' "$G" "$N"
+    printf '%sAll three are running.%s\n' "$G" "$N"
 else
-    printf '%sMindestens eine App ist nicht hochgekommen.%s\n' "$Y" "$N"
+    printf '%sAt least one app failed to start.%s\n' "$Y" "$N"
 fi
 cat <<EOF
 
-  Projekt 1 (Dash, irfanchahyadi)        http://localhost:8051
-  Projekt 2 (Streamlit, karanprasadgupta) http://localhost:8502
-  Projekt 3 (Streamlit, campusx)          http://localhost:8503
+  Project 1 (Dash, irfanchahyadi)         http://localhost:8051
+  Project 2 (Streamlit, karanprasadgupta) http://localhost:8502
+  Project 3 (Streamlit, campusx)          http://localhost:8503
 
-  Logs:    tail -f logs/*.log
-  Stoppen: ./stop.sh
+  Logs: tail -f logs/*.log
+  Stop: ./stop.sh
 EOF
 
 exit $overall

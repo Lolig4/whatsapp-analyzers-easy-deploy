@@ -9,10 +9,10 @@ from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 from src import charts, chat_parser, layouts, settings
 
-# Offline: Bootstrap und FontAwesome werden lokal aus assets/vendor/ geladen
-# statt von einem CDN (dbc.themes.BOOTSTRAP zeigt auf jsdelivr).
-# assets_ignore verhindert, dass Dash die vendor-CSS zusaetzlich automatisch
-# einbindet - explizite Reihenfolge: Bootstrap -> FontAwesome -> custom.css.
+# Offline: Bootstrap and FontAwesome are served locally from assets/vendor/
+# instead of a CDN (dbc.themes.BOOTSTRAP points at jsdelivr).
+# assets_ignore stops Dash from *also* auto-including the vendor CSS - explicit
+# order: Bootstrap -> FontAwesome -> custom.css.
 app = dash.Dash(
     __name__,
     external_stylesheets=[settings.BOOTSTRAP_CSS, settings.FONT_AWESOME],
@@ -30,8 +30,8 @@ app.index_string = """
             <title>{%title%}</title>
             {%favicon%}
             {%css%}
-            <!-- Google-Analytics-Block (gtag.js) entfernt: laedt von
-                 googletagmanager.com und bricht den Offline-Betrieb. -->
+            <!-- Google Analytics block (gtag.js) removed: it loads from
+                 googletagmanager.com and breaks offline operation. -->
         </head>
         <body>
             {%app_entry%}
@@ -286,9 +286,9 @@ def update_personalchat(dropdown_users, start_date_str, end_date_str, interval1,
     return output
 
 if __name__ == "__main__":
-    # app.run_server() ist in Dash 3 entfernt worden; app.run() ist das
-    # Aequivalent und existiert auch schon in Dash 2.
-    # Nur an 127.0.0.1 binden - die App ist von aussen nicht erreichbar.
-    # debug=False: der Reloader startet den Prozess sonst neu und die von
-    # start.sh geschriebene PID stimmt danach nicht mehr.
+    # app.run_server() was removed in Dash 3; app.run() is the equivalent and
+    # already exists in Dash 2.
+    # Bind to 127.0.0.1 only - the app is not reachable from the network.
+    # debug=False: otherwise the reloader restarts the process and the PID
+    # written by start.sh no longer matches.
     app.run(host=settings.HOST, port=settings.PORT, debug=False)

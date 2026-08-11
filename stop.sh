@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# stop.sh - beendet alle von start.sh gestarteten Apps.
+# stop.sh - stop everything start.sh launched.
 #
-# Erst SIGTERM, nach 10s SIGKILL. Beendet auch Kindprozesse (Streamlit startet
-# sich als Unterprozess von "python -m streamlit"), daher ueber die Prozessgruppe.
+# SIGTERM first, SIGKILL after 10s. Signals the whole process group so child
+# processes go too (Streamlit runs as a child of "python -m streamlit").
 #
 set -Eeuo pipefail
 
@@ -16,7 +16,7 @@ else
     B=""; G=""; Y=""; N=""
 fi
 
-printf '%s==>%s Stoppe Apps\n' "$B" "$N"
+printf '%s==>%s Stopping apps\n' "$B" "$N"
 
 shopt -s nullglob
 found=0
@@ -27,12 +27,12 @@ for pidfile in "$PID_DIR"/*.pid; do
     pid="$(cat "$pidfile" 2>/dev/null || true)"
 
     if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
-        printf '  %s!%s %-28s lief nicht mehr\n' "$Y" "$N" "$name"
+        printf '  %s!%s %-28s was not running\n' "$Y" "$N" "$name"
         rm -f "$pidfile"
         continue
     fi
 
-    # Ganze Prozessgruppe beenden, damit keine Streamlit-Kinder ueberleben.
+    # Kill the whole process group so no Streamlit children survive.
     pgid="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
     if [[ -n "$pgid" ]]; then
         kill -TERM -"$pgid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
@@ -47,14 +47,14 @@ for pidfile in "$PID_DIR"/*.pid; do
 
     if kill -0 "$pid" 2>/dev/null; then
         [[ -n "$pgid" ]] && kill -KILL -"$pgid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
-        printf '  %s!%s %-28s hart beendet (SIGKILL)\n' "$Y" "$N" "$name"
+        printf '  %s!%s %-28s force-killed (SIGKILL)\n' "$Y" "$N" "$name"
     else
-        printf '  %s+%s %-28s gestoppt\n' "$G" "$N" "$name"
+        printf '  %s+%s %-28s stopped\n' "$G" "$N" "$name"
     fi
 
     rm -f "$pidfile"
 done
 
 if (( ! found )); then
-    printf '  %s!%s Keine laufenden Apps gefunden (pids/ ist leer).\n' "$Y" "$N"
+    printf '  %s!%s No running apps found (pids/ is empty).\n' "$Y" "$N"
 fi

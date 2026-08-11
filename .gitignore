@@ -1,16 +1,16 @@
-# --- Virtuelle Umgebungen (werden von setup.sh erzeugt) ----------------------
+# --- virtual environments (created by setup.sh) ------------------------------
 .venv/
 venv/
 env/
 
-# --- Laufzeitartefakte von start.sh ------------------------------------------
+# --- runtime artifacts from start.sh -----------------------------------------
 logs/
 pids/
 *.log
 *.pid
 
-# --- Von setup.sh heruntergeladene CDN-Assets (Bootstrap/FontAwesome) --------
-# Bewusst nicht im Repo: ~1 MB Binaerdateien, jederzeit reproduzierbar.
+# --- CDN assets downloaded by setup.sh (Bootstrap/FontAwesome) ---------------
+# Deliberately not in the repo: ~1 MB of binaries, reproducible at any time.
 1-irfanchahyadi-dash/assets/vendor/
 
 # --- Python ------------------------------------------------------------------
@@ -20,7 +20,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# --- Backups / Editor / OS ---------------------------------------------------
+# --- backups / editor / OS ---------------------------------------------------
 *.orig
 *.bak
 *~
@@ -28,8 +28,8 @@ __pycache__/
 .idea/
 .DS_Store
 
-# --- Hochgeladene Chats: niemals versehentlich committen ---------------------
-# Die Apps verarbeiten private WhatsApp-Exporte.
+# --- uploaded chats: never commit these by accident --------------------------
+# The apps process private WhatsApp exports.
 *_chat.txt
 WhatsApp Chat*.txt
 uploads/
