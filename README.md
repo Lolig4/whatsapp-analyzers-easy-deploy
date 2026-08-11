@@ -76,9 +76,9 @@ the three `vendor:` commits hold the pristine upstream code.
 **Project 2 (Streamlit)** — added `numpy`. Its whole script body sits in one
 `except Exception` printing "Unable to Process Your Request", hiding failures.
 
-**Project 3 (Streamlit)** — `helper.py:88`: `emoji.UNICODE_EMOJI['en']` →
-`emoji.EMOJI_DATA`, removed in emoji 2.0; with a current `emoji` package the
-analysis died with `AttributeError` on "Show Analysis". Added `numpy`.
+**Project 3 (Streamlit)** — `helper.py:88`: `emoji.UNICODE_EMOJI['en']` was
+removed in emoji 2.0, so the analysis died with `AttributeError` on "Show
+Analysis"; now `emoji.is_emoji()`. Added `numpy`.
 
 **All three: non-US date formats.** Upstream every project matched only `d/m/yy`
 dates. German exports use dots (`20.12.25, 21:33 - `), so projects 2 and 3
@@ -92,6 +92,12 @@ German export.
 `$PORT`. Replaced by a project-local `.streamlit/config.toml`. Both also
 crashed on chats without emoji (`KeyError: 1` from a column-less DataFrame, then
 `ax.pie` on empty data) — they now say "No emoji found in this chat."
+
+## Upstream pull requests
+
+All 18 open PRs on project 3's repo were reviewed: six adopted — adapted, not
+merged, since each would have reverted the fixes above — and twelve rejected as
+broken, redundant or cosmetic. Reasons per PR are in `git log`.
 
 ## Does anything send data out? No.
 
