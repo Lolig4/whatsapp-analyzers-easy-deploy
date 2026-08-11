@@ -79,7 +79,35 @@ LANGUAGE = {
         'event_icon': 'telah mengubah ikon grup ini',
         'event_add': 'telah menambahkan',
         'event_add2': 'menambahkan',
-        'event_left': 'keluar'}}
+        'event_left': 'keluar'},
+    'de': {
+        # German Android export. Dates use dots: "20.12.25, 21:33 - ".
+        'language': 'German',
+        'date': '%d.%m.%y, %H:%M',
+        'media': 'Medien ausgeschlossen',
+        'you': 'Du',
+        'and': 'und',
+        'location': 'Live-Standort wird geteilt',
+        'location2': 'Standort',
+        'contact': 'Datei angehängt',
+        'deleted': 'Diese Nachricht wurde gelöscht',
+        'deleted2': 'Du hast diese Nachricht gelöscht',
+        # detect_language() distinguishes group from personal chat by these two
+        # tokens, and the regex is '.+\s(TOKEN)\s.+' - so the token needs
+        # whitespace on both sides in the real export text:
+        #   group    "... Niemand außerhalb dieses Chats, nicht einmal WhatsApp ..."
+        #   personal "... Nur Personen in diesem Chat können sie lesen ..."
+        'events_encripted': 'außerhalb',
+        'events_encripted2': 'Personen',
+        'event_changed_phone': 'hat die Telefonnummer geändert.',
+        'event_changed_phone2': 'gewechselt zu',
+        'event_admin': 'Du bist jetzt ein Admin',
+        'event_create': 'hat die Gruppe erstellt',
+        'event_subject': 'hat den Betreff geändert von',
+        'event_icon': 'hat das Gruppenbild geändert',
+        'event_add': 'hat hinzugefügt',
+        'event_add2': 'hinzugefügt',
+        'event_left': 'hat die Gruppe verlassen'}}
 
 PATTERN = {
     'emoji': '<(?:Emoji)(?:[^>]+)>',
