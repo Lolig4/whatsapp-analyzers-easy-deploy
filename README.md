@@ -75,6 +75,13 @@ the list). No code change needed.
 `emoji.EMOJI_DATA`, removed in emoji 2.0; with a current `emoji` package the
 analysis died with `AttributeError` on "Show Analysis". Added `numpy`.
 
+**All three: non-US date formats.** Upstream every project matched only `d/m/yy`
+dates. German exports use dots (`20.12.25, 21:33 - `), so projects 2 and 3
+silently produced an *empty* analysis and project 1 rejected the file outright.
+Projects 2 and 3 now accept `.`, `/` and `-` separators and strip WhatsApp's
+bidi marks; project 1 gained a German `LANGUAGE` entry. Verified against a real
+German export.
+
 **Both Streamlit projects** — their bundled `setup.sh` is unused: it wrote to
 `~/.streamlit/config.toml` (global, outside this folder) and took the port from
 `$PORT`. Replaced by a project-local `.streamlit/config.toml`.
@@ -102,21 +109,30 @@ browser:
 - **Browser side**: all served JavaScript (Dash 2.6 MB, Streamlit 2.2 MB) was
   scanned for Google Analytics, Segment, Mixpanel, Amplitude, Sentry, Hotjar,
   FullStory, PostHog, Datadog, Matomo, Facebook and more — no hits. Streamlit's
-  `fonts.gstatic.com` reference only serves `:material/name:` icons, which
-  neither project uses.
-- Nothing was written outside this folder apart from the usual `~/.cache/pip`.
+  `fonts.gstatic.com` reference only serves `:material/name:` icons, unused
+  here. Nothing was written outside this folder apart from `~/.cache/pip`.
 
 `.gitignore` also excludes `*_chat.txt` and `WhatsApp Chat*.txt`, so a private
 export cannot land in git by accident.
 
 ## Known issues
 
-**Project 1 rejects most chat exports.** `detect_language()` only matches
-`.+\s(encrypted)\s.+`, so "encrypted" must have whitespace on both sides.
-Current English exports write "…end-to-end encrypted." with a period and never
-match, giving *"Language not supported"*. Only English and Indonesian exist
-anyway, so **German exports do not work with project 1** — use project 2 or 3.
-Upstream bug, not patched.
+**English exports may be rejected by project 1.** `detect_language()` matches
+`.+\s(encrypted)\s.+`, so "encrypted" needs whitespace on both sides. Current
+English exports write "…end-to-end encrypted." with a period and never match,
+giving *"Language not supported"*. Upstream bug, not patched — German and
+Indonesian are unaffected because their tokens do sit between spaces.
+
+**German group events are not classified (project 1).** Messages parse fine,
+but "created group", "changed the subject", "added" etc. are matched by regexes
+that encode English word order (`X created group "Y"` vs `X hat die Gruppe "Y"
+erstellt`). They fall through to raw text instead of becoming typed events;
+nothing breaks and personal chats are unaffected.
+
+**Ambiguous date formats.** `20.12.25` is unambiguous, but `03/04/25` could be
+either day- or month-first. Projects 2 and 3 try day-first layouts first,
+matching what upstream assumed; project 2 additionally has a `dd-mm-yy` /
+`mm-dd-yy` toggle in its UI.
 
 **Project 1 breaks on pandas 3**, hence the `<3` pin (installed: 2.3.3). Every
 upload failed with `TypeError: Invalid value (...) for dtype 'float64'`, because
@@ -128,10 +144,6 @@ PostgreSQL-dialect SQL (`%s` placeholders) against SQLite:
 `sqlite3.OperationalError: near "%": syntax error`. Upstream this ran on Heroku
 Postgres. Only affects URL sharing; the analysis works with the switch off (the
 default). Not patched.
-
-**Date formats.** Projects 2 and 3 expect `d/m/yy, HH:MM - `. Project 2 has a
-`dd-mm-yy` / `mm-dd-yy` toggle in the UI, project 3 hardcodes `%d/%m/%Y`. A
-mismatched export yields an empty or failing analysis.
 
 **Busy ports.** `start.sh` skips apps whose port is taken. Find leftovers with
 `ss -ltnp | grep -E ':(8051|8502|8503)'`.
