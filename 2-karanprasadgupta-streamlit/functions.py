@@ -14,15 +14,22 @@ from wordcloud import WordCloud
 def generateDataFrame(file):
     data = file.read().decode("utf-8")
     data = data.replace('\u202f', ' ')
+    # Bidi marks WhatsApp puts in front of system messages - they would end up
+    # inside the user name otherwise.
+    data = data.replace('\u200e', '').replace('\u200f', '')
     data = data.replace('\n', ' ')
-    dt_format = '\d{1,2}/\d{1,2}/\d{2,4},\s\d{1,2}:\d{2}\s?(?:AM\s|PM\s|am\s|pm\s)?-\s'
+    # Upstream only matched "d/m/yy". German (and most non-US) exports use dots,
+    # e.g. "20.12.25, 21:33 - ", so nothing matched and the result was an empty
+    # DataFrame. Accept . / and - as separators plus optional seconds.
+    dt_format = ('\d{1,2}[./-]\d{1,2}[./-]\d{2,4},\s\d{1,2}:\d{2}(?::\d{2})?'
+                 '\s?(?:AM\s|PM\s|am\s|pm\s)?-\s')
     msgs = re.split(dt_format, data)[1:]
     date_times = re.findall(dt_format, data)
     date = []
     time = []
     for dt in date_times:
-        date.append(re.search('\d{1,2}/\d{1,2}/\d{2,4}', dt).group())
-        time.append(re.search('\d{1,2}:\d{2}\s?(?:AM|PM|am|pm)?', dt).group())
+        date.append(re.search('\d{1,2}[./-]\d{1,2}[./-]\d{2,4}', dt).group())
+        time.append(re.search('\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)?', dt).group())
     users = []
     message = []
     for m in msgs:
@@ -40,7 +47,10 @@ def generateDataFrame(file):
 def getUsers(df):
     users = df['User'].unique().tolist()
     users.sort()
-    users.remove('Notifications')
+    # Guard: a chat without any system message has no 'Notifications' entry,
+    # and the bare .remove() would raise ValueError.
+    if 'Notifications' in users:
+        users.remove('Notifications')
     users.insert(0, 'Everyone')
     return users
 
