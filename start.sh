@@ -12,6 +12,12 @@
 #
 set -Eeuo pipefail
 
+# Job-Control einschalten: dadurch bekommt jeder Hintergrundjob eine EIGENE
+# Prozessgruppe (pgid == pid). Ohne das landen alle drei Apps in der
+# Prozessgruppe dieses Skripts - stop.sh beendet dann beim Stoppen der ersten
+# App unabsichtlich auch die beiden anderen.
+set -m
+
 BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$BASE"
 
