@@ -1,13 +1,13 @@
 # WhatsApp Analyzers — Easy Deploy
 
 > **Built by Claude (Anthropic)**: the setup, dependency repairs, offline
-> conversion, the `setup.sh` / `start.sh` / `stop.sh` scripts, the git history
-> and this README. The analyzer code itself belongs to the upstream authors;
-> every change made to it is listed below and exists as its own commit.
+> conversion, the scripts, the git history and this README. The analyzer code
+> itself belongs to the upstream authors; every change to it is listed below and
+> exists as its own commit.
 
-Three WhatsApp chat analyzers from GitHub, running locally: one isolated venv
-and one port each, and **no outbound network traffic at runtime**. Internet is
-only needed once, for `setup.sh`.
+Three WhatsApp chat analyzers from GitHub, running locally: one isolated venv and
+one port each, and **no outbound network traffic at runtime**. Internet is only
+needed once, for `setup.sh`.
 
 | # | Project | Framework | URL |
 |---|---------|-----------|-----|
@@ -15,15 +15,12 @@ only needed once, for `setup.sh`.
 | 2 | [karanprasadgupta/WhatsAppChatAnalzyer](https://github.com/karanprasadgupta/WhatsAppChatAnalzyer) (`37e856a`) | Streamlit | <http://localhost:8502> |
 | 3 | [campusx-official/whatsapp-chat-analysis](https://github.com/campusx-official/whatsapp-chat-analysis) (`80b156e`) | Streamlit | <http://localhost:8503> |
 
-All three bind to `127.0.0.1` only and are unreachable from the network.
-
 ## Quick start
 
 ```bash
 ./setup.sh                 # once: venvs + dependencies + offline assets
 ./start.sh                 # start all three, check ports, open browser tabs
 ./stop.sh                  # stop all three
-
 ./setup.sh --force         # rebuild the venvs from scratch
 ./start.sh --no-browser    # start without opening tabs
 tail -f logs/*.log         # follow the logs
@@ -53,28 +50,31 @@ the three `vendor:` commits hold the pristine upstream code.
 
 **Project 1 (Dash)**
 - Dropped `psycopg2` (app uses SQLite, never imports it, needs `libpq-devel` to
-  build — this alone broke `pip install`), the four Dash stub packages (empty
-  since Dash 2.0) and `gunicorn` (Heroku only).
-- Pinned `dash<3` (Dash 3 removed `app.run_server()`),
-  `dash-bootstrap-components<2` (needs Dash 3), `SQLAlchemy<2.0` (2.x forbids
-  the raw-string `con.execute()` in `db_handler.py`), `pandas<3` (see below).
-  Added `numpy`.
+  build — this alone broke `pip install`), the four Dash stub packages and
+  `gunicorn`.
+- Pinned `dash<3` (removed `app.run_server()`), `dash-bootstrap-components<2`,
+  `SQLAlchemy<2.0` (2.x forbids the raw-string `con.execute()` in
+  `db_handler.py`) and `pandas<3` (see below). Added `numpy`.
 - Offline: Google Analytics removed from `app.py`; Bootstrap and FontAwesome
   served from `assets/vendor/`. `assets_ignore=r"\.vendor\.css$"` is required,
   or Dash auto-includes the vendor CSS again *after* `custom.css` and Bootstrap
   overrides the project's styling.
 - `app.run_server(debug=True)` → `app.run(host, port, debug=False)`, host/port
   from `settings.py` (`WCA_HOST` / `WCA_PORT`, default `127.0.0.1:8051`).
-- Four crashes that made the analysis view unreachable: `Series.iteritems()`
+- Six defects that left the analysis view empty or broken. The one that hid all
+  statistics on a personal chat: the personalchat layout was copied from the
+  groupchat one and kept `id='counter'`, while `update_personalchat` outputs to
+  `counter2` — a missing output component makes the Dash frontend skip the whole
+  callback, silently, with nothing in the log. Also: `Series.iteritems()`
   (removed in pandas 2.0) broke `award_list()` and with it every analysis page;
   `db_handler.get_chat()` returned 2 values instead of 3 for unknown keys;
   `display_page()` missed the `?from=landing_page` marker because `dcc.Location`
-  moves it into `search`, so a fresh upload was looked up in the database and
-  never rendered; and `Counter(...list_link.sum())` broke on chats without links.
+  moves it into `search`; `Counter(...list_link.sum())` broke on chats without
+  links; and five callbacks did `json.loads(None)` before the store was filled
+  (now `PreventUpdate`).
 
-**Project 2 (Streamlit)** — added `numpy` (imported by `main.py`, missing from
-the list). Note its whole script body sits in one `except Exception` printing
-"Unable to Process Your Request", so failures there are invisible.
+**Project 2 (Streamlit)** — added `numpy`. Its whole script body sits in one
+`except Exception` printing "Unable to Process Your Request", hiding failures.
 
 **Project 3 (Streamlit)** — `helper.py:88`: `emoji.UNICODE_EMOJI['en']` →
 `emoji.EMOJI_DATA`, removed in emoji 2.0; with a current `emoji` package the
@@ -101,8 +101,8 @@ browser:
 - **Project code** imports no networking module and makes no outbound calls. The
   URLs in it are `href` links, license comments and SVG namespaces — none fetched.
 - **Proof by isolation**: all three run in a network namespace with no network
-  access (`unshare -rn`; `curl` verified to fail there). All three serve HTTP 200
-  and the full analysis pipeline completes.
+  access (`unshare -rn`; `curl` verified to fail there), serving HTTP 200 with
+  the full analysis pipeline completing.
 - **Streamlit telemetry** is off via `browser.gatherUsageStats = false` (verified
   with `streamlit config show`). The frontend gates sending on
   `actuallySendMetrics = gatherUsageStats && metricsUrl !== "off"`, and that flag
@@ -115,38 +115,36 @@ browser:
   scanned for Google Analytics, Segment, Mixpanel, Amplitude, Sentry, Hotjar,
   FullStory, PostHog, Datadog, Matomo, Facebook and more — no hits. Streamlit's
   `fonts.gstatic.com` reference only serves `:material/name:` icons, unused here.
-  Nothing was written outside this folder apart from `~/.cache/pip`.
-
-`.gitignore` also excludes `*_chat.txt` and `WhatsApp Chat*.txt`, so a private
-export cannot land in git by accident.
+- Nothing was written outside this folder apart from `~/.cache/pip`, and
+  `.gitignore` excludes `*_chat.txt` so a private export cannot land in git.
 
 ## Known issues
+
+Things that are **not** fixed — deliberately left alone or inherent. Everything
+repaired during this work is under *What was changed* above.
 
 **English exports may be rejected by project 1.** `detect_language()` matches
 `.+\s(encrypted)\s.+`, so "encrypted" needs whitespace on both sides. Current
 English exports write "…end-to-end encrypted." with a period and never match,
-giving *"Language not supported"*. Upstream bug, not patched — German and
-Indonesian are unaffected because their tokens do sit between spaces.
+giving *"Language not supported"*. Upstream bug, not patched; German and
+Indonesian tokens do sit between spaces and are unaffected.
 
-**German group events are not classified (project 1).** Messages parse fine,
-but "created group", "changed the subject", "added" etc. are matched by regexes
-that encode English word order (`X created group "Y"` vs `X hat die Gruppe "Y"
-erstellt`). They fall through to raw text instead of becoming typed events;
-nothing breaks and personal chats are unaffected.
+**German group events are not classified (project 1).** Messages parse fine, but
+"created group", "added" etc. are matched by regexes encoding English word order
+(`X created group "Y"` vs `X hat die Gruppe "Y" erstellt`), so they stay raw text
+instead of typed events. Personal chats are unaffected.
 
-**Ambiguous date formats.** `03/04/25` could be day- or month-first. Projects 2
-and 3 try day-first first, as upstream assumed; project 2 has a `dd-mm-yy` /
-`mm-dd-yy` toggle in its UI.
+**Ambiguous date formats.** `03/04/25` could be day- or month-first; projects 2
+and 3 try day-first, and project 2 has a `dd-mm-yy` / `mm-dd-yy` toggle in its UI.
 
-**Project 1 breaks on pandas 3**, hence the `<3` pin (installed: 2.3.3). Every
-upload failed with `TypeError: Invalid value (...) for dtype 'float64'`, because
-pandas 3 no longer upcasts an empty `float64` column on `.loc` assignment.
-Projects 2 and 3 are unaffected and run on pandas 3.
+**Project 1 breaks on pandas 3**, hence the `<3` pin (installed: 2.3.3): pandas 3
+no longer upcasts an empty `float64` column on `.loc` assignment, so every upload
+failed. Projects 2 and 3 are unaffected and run on pandas 3.
 
 **Project 1's "Save" switch is broken.** `db_handler.add_chat()` writes
 PostgreSQL-dialect SQL (`%s` placeholders) against SQLite:
 `sqlite3.OperationalError: near "%": syntax error`. Only affects URL sharing;
 the analysis works with the switch off (the default). Not patched.
 
-**Busy ports.** `start.sh` skips apps whose port is taken. Find leftovers with
+**Busy ports.** `start.sh` skips apps whose port is taken; find leftovers with
 `ss -ltnp | grep -E ':(8051|8502|8503)'`.
