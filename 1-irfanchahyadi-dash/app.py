@@ -6,6 +6,7 @@ import dash
 from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from src import charts, chat_parser, layouts, settings
 
@@ -106,6 +107,10 @@ def upload_data(contents, n_click, save, url_input):
     [Input('dropdown-users', 'value')], [State('data-store', 'data')])
 def fill_dropdown_users_groupchat(dropdown_users, datasets):
     """Initialize dropdown-users options and other groupchat scope data."""
+    if datasets is None:
+        # Callback fired before the data-store was filled (first render).
+        # json.loads(None) would raise and return HTTP 500.
+        raise PreventUpdate
     datasets = json.loads(datasets)
     df = pd.read_json(datasets['data'], orient='split')
     output = [
@@ -121,6 +126,10 @@ def fill_dropdown_users_groupchat(dropdown_users, datasets):
     [Input('dropdown-users2', 'value')], [State('data-store', 'data')])
 def fill_dropdown_users_personalchat(dropdown_users, datasets):
     """Initialize dropdown-users options and other groupchat scope data."""
+    if datasets is None:
+        # Callback fired before the data-store was filled (first render).
+        # json.loads(None) would raise and return HTTP 500.
+        raise PreventUpdate
     datasets = json.loads(datasets)
     df = pd.read_json(datasets['data'], orient='split')
     output = [
@@ -134,6 +143,10 @@ def fill_dropdown_users_personalchat(dropdown_users, datasets):
 @app.callback([Output('date-picker', 'min_date_allowed'), Output('date-picker', 'max_date_allowed')], [Input('date-picker', 'id')], [State('data-store', 'data')])
 def update_date_picker(id_date_picker, datasets):
     """Initialize date-picker min and max allowed date."""
+    if datasets is None:
+        # Callback fired before the data-store was filled (first render).
+        # json.loads(None) would raise and return HTTP 500.
+        raise PreventUpdate
     datasets = json.loads(datasets)
     return datasets['chat_min_date'], datasets['chat_max_date']
 
@@ -163,6 +176,10 @@ def update_help_switch(show):
     [State('data-store', 'data')])
 def update_groupchat(dropdown_users, start_date_str, end_date_str, interval1, interval2, datasets):
     """Update displayed data and chart at first and when filter apply."""
+    if datasets is None:
+        # Callback fired before the data-store was filled (first render).
+        # json.loads(None) would raise and return HTTP 500.
+        raise PreventUpdate
     datasets = json.loads(datasets)
     df = pd.read_json(datasets['data'], orient='split')
     lang = datasets['lang']
@@ -237,6 +254,10 @@ def update_groupchat(dropdown_users, start_date_str, end_date_str, interval1, in
     [State('data-store', 'data')])
 def update_personalchat(dropdown_users, start_date_str, end_date_str, interval1, interval2, datasets):
     """Update displayed data and chart at first and when filter apply."""
+    if datasets is None:
+        # Callback fired before the data-store was filled (first render).
+        # json.loads(None) would raise and return HTTP 500.
+        raise PreventUpdate
     datasets = json.loads(datasets)
     df = pd.read_json(datasets['data'], orient='split')
     lang = datasets['lang']
