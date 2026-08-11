@@ -286,4 +286,9 @@ def update_personalchat(dropdown_users, start_date_str, end_date_str, interval1,
     return output
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    # app.run_server() ist in Dash 3 entfernt worden; app.run() ist das
+    # Aequivalent und existiert auch schon in Dash 2.
+    # Nur an 127.0.0.1 binden - die App ist von aussen nicht erreichbar.
+    # debug=False: der Reloader startet den Prozess sonst neu und die von
+    # start.sh geschriebene PID stimmt danach nicht mehr.
+    app.run(host=settings.HOST, port=settings.PORT, debug=False)

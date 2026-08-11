@@ -5,6 +5,11 @@ DATABASE_URL = 'sqlite:///src/wca.db'
 APP_NAME = 'Whatsapp Chat Analyzer'
 LOGO = '/assets/logo.png'
 
+# Bindeadresse und Port fuer den lokalen Betrieb; per Umgebungsvariable
+# ueberschreibbar (start.sh setzt sie).
+HOST = os.environ.get('WCA_HOST', '127.0.0.1')
+PORT = int(os.environ.get('WCA_PORT', '8051'))
+
 # Bootstrap und FontAwesome liegen lokal in assets/vendor/ (von setup.sh geholt)
 # statt auf einem CDN. Ohne das laedt die Seite jsdelivr + use.fontawesome.com
 # und ist ohne Internet kaputt.
